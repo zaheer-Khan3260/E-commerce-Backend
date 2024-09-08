@@ -14,7 +14,7 @@ export const verifyJwt = asyncHandler(async (req, _, next) => {
         const decodedToken = jwt.verify(token, process.env.JWT_ACCESS_TOKEN_SECRET);
 
         const user = decodedToken;
-        
+
         req.user = user;
 
         next();
