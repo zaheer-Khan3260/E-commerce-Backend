@@ -28,7 +28,6 @@ const generateAccessAndRefereshTokens = async(userId) =>{
 }
 
 export const userRegistration = asyncHandler(async (req, res) => {
-
     const {username, email, password} = req.body
 
     if(!username && !password && !email){
