@@ -5,7 +5,6 @@ import {
     viewProfile,
     updateProfile
 } from "../controllers/user.controller.js"
-
 import {verifyJwt} from "../middlewares/auth.middleware.js"
 
 

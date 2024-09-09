@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import {User} from "../models/user.model.js"
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
@@ -22,16 +23,17 @@ const generateAccessAndRefereshTokens = async(userId) =>{
     } catch (error) {
         throw new ApiError(
             500, 
-            "Something went wrong while generating referesh and access token"
+            error.message
         )
     }
 }
 
 export const userRegistration = asyncHandler(async (req, res) => {
+    
     const {username, email, password} = req.body
 
     if(!username && !password && !email){
-        return new ApiError(
+        throw new ApiError(
             406, 
             "All fields required"
         );
@@ -40,7 +42,7 @@ export const userRegistration = asyncHandler(async (req, res) => {
     const existingUser = await User.findOne({email});
 
     if(existingUser) {
-        return new ApiError(409, "Email already exists");
+        throw new ApiError(409, "Email already exists");
     }
 
     const user = await User.create({
@@ -54,7 +56,7 @@ export const userRegistration = asyncHandler(async (req, res) => {
     )
 
     if(!createdUser) {
-        return new ApiError(
+        throw new ApiError(
             500, 
             "Failed to create a new User"
         )
@@ -71,48 +73,53 @@ export const userRegistration = asyncHandler(async (req, res) => {
 export const userLogin = asyncHandler(async (req, res) => {
         const { email, password } = req.body;
 
-        if (!email ||!password) {
-            return new ApiError(
+        if (!email && !password) {
+            throw new ApiError(
                 406, 
                 "All fields required"
             );
         }
-
         const user = await User.findOne({ email });
         
         if (!user) {
-            return new ApiError(
+            throw new ApiError(
                 404,
                 "User not found"
             )
         };
-        
-        const isPasswordCorrect = await user.isPasswordCorrect(password);
-        if(!isPasswordCorrect){
-            return new ApiError(
+        const passwordValidation = await user.isPasswordCorrect(password);
+
+        if(!passwordValidation){
+           throw new ApiError(
                 401,
                 "Invalid credentials"
-            )
+           )
         }
-        
+    
         const {accessToken, refreshToken} = await generateAccessAndRefereshTokens(user._id)
 
-        const loggedInUser = await User.findById(user._id)
-        .select("-password -refreshToken")
-
+        const updatedUser = await User.findByIdAndUpdate(
+            user._id,    
+        ).select("-password -refreshToken")
+        
+        if(!updatedUser){
+            throw new ApiError(
+                500,
+                "Failed to update user"
+            )
+        }
         const option = {
             httpOnly : true,
-            secure: true,
-            sameSite: 'None'
+            secure: true
         };
 
         return res.status(200)
-        .cookies("accessToken", accessToken, option)
-        .cookies("refreshToken", refreshToken, option)
+        .cookie("accessToken", accessToken, option)
+        .cookie("refreshToken", refreshToken, option)
         .json(
             new ApiResponse(
                 200,
-                loggedInUser,
+                updatedUser,
                 "User logged in successfully"
             )
         )
@@ -120,20 +127,21 @@ export const userLogin = asyncHandler(async (req, res) => {
 
 
 export const viewProfile = asyncHandler(async (req, res) => {
+    console.log("req params data: ", req.params);
         const id = req.params.id
-
+            console.log("id: ", id)
         if(!id){
-            return new ApiError(
+            throw new ApiError(
                 400,
                 "Invalid user ID"
             )
         }
 
-        const user = await User.findById(id)
+        const user = await User.findById(new mongoose.Types.ObjectId(id))
         .select("-password -refreshToken")
 
         if(!user){
-            return new ApiError(
+            throw new ApiError(
                 404,
                 "User not found"
             )
@@ -154,32 +162,37 @@ export const updateProfile = asyncHandler(async (req, res) => {
     const {username, email} = req.body
 
     if(!id){
-        return new ApiError(
+        throw new ApiError(
             400,
             "Invalid user ID"
         )
     }
 
     if(!username && !email){
-        return new ApiError(
+        throw new ApiError(
             406,
             "At least one field required"
         )
     }
+    const user = await User.findById(id)
 
-    const updatedUser = await User.findByIdAndUpdate(
-        id,
+    if(!user){
+        throw new ApiError(
+            404,
+            "User not found"
+        )
+    }
+
+    user.email = email? email : user.email;
+    user.username = username? username : user.username;
+    user.save(
         {
-            $set: {
-                username,
-                email
-            }
-        },
-        {new: true}
-    ).select("-password -refreshToken")
-
+            validateBeforeSave: false
+        }
+    )
+    const updatedUser = await User.findById(id).select("-password -refreshToken")
     if(!updatedUser){
-        return new ApiError(
+        throw new ApiError(
             404,
             "User not found"
         )
