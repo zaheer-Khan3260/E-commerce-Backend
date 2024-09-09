@@ -14,20 +14,6 @@ dotenv.config({
 
 export const app = express();
 
-const corsOptions = {
-    origin: [process.env.CORS_ORIGIN, "http://localhost:3000"],
-    methods: "GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS",
-    credentials: true,
-    allowedHeaders: "Content-Type, Authorization, X-Requested-With",
-    preflightContinue: false,
-    optionsSuccessStatus: 204
-}
-
-app.use(cors(corsOptions));
-app.use(express.json( {limit: "2mb"}))
-app.use(express.urlencoded({extended: true, limit: "16kb"}));
-app.use(express.static("public"))
-app.use(cookieParser());
 
 const CPU = os.cpus().length;
     if(cluster.isPrimary){
@@ -36,9 +22,6 @@ const CPU = os.cpus().length;
         }
     }else{
 
-        app.get('/',(req, res) => {
-            res.send('Hello World!');
-        })
         connectDatabase()
         .then(() => {
             console.log("PORT:", process.env.PORT );
@@ -51,6 +34,23 @@ const CPU = os.cpus().length;
         })
         
     }
+
+    const corsOptions = {
+        origin: [process.env.CORS_ORIGIN, "http://localhost:3000"],
+        methods: "GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS",
+        credentials: true,
+        allowedHeaders: "Content-Type, Authorization, X-Requested-With",
+        preflightContinue: false,
+        optionsSuccessStatus: 204
+    }
+    
+    app.use(cors(corsOptions));
+    app.use(express.json( {limit: "2mb"}))
+    app.use(express.urlencoded({extended: true, limit: "16kb"}));
+    app.use(express.static("public"))
+    app.use(cookieParser());
+
+
 
 
 import userRouter from "./src/routes/user.routes.js"
