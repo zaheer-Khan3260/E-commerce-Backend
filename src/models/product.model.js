@@ -12,10 +12,6 @@ const productSchema = new Schema(
             type: Number,
             required: true
         },
-        category: {
-            type: String,
-            required: true
-        },
         stock: {
             type: Number,
             required: true
@@ -23,11 +19,7 @@ const productSchema = new Schema(
         description: {
             type: String,
             required: true
-        },
-        images: [{
-            type: String,
-            required: true
-        }]
+        }
     },
     {
         timestamps: true,

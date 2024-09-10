@@ -53,8 +53,11 @@ const CPU = os.cpus().length;
 
 
 
-import userRouter from "./src/routes/user.routes.js"
-
+import userRouter from "./src/routes/user.routes.js";
+import productRouter from "./src/routes/product.routes.js";
+import orderRouter from "./src/routes/order.routes.js";
 
 
 app.use("/", userRouter);
+app.use("/products", productRouter);
+app.use("/orders", orderRouter);
