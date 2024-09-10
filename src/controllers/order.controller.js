@@ -172,11 +172,73 @@ export const viewSingleOrder = asyncHandler(async (req, res) => {
         );
     }
 
+    const orderItems = await Order_item.find({ order_id: order._id }).populate('product_id');
+    if(!orderItems){
+        throw new ApiError(
+            404,
+            "No order items found for this order"
+        );
+    }
+
+    const order_details = [
+        {
+            order_id: order._id,
+            user_id: order.user_id,
+            total_amount: order.total_amount,
+            status: order.status,
+            order_items: orderItems.map(item => ({
+                product_id: item.product_id._id,
+                product_name: item.product_id.name,
+                quantity: item.quantity,
+                price: item.price
+            })),
+            createdAt: order.createdAt,
+            updatedAt: order.updatedAt
+        }
+    ]
+
+
     return res.status(200).json(
         new ApiResponse(
             200,
-            order,
+            order_details,
             "Order fetched successfully"
         )
     )
 })
+
+export const cancelOrder = asyncHandler(async (req, res) => {
+    const id = req.params.id;
+
+    if (!id) {
+        throw new ApiError(400, "Order ID is required");
+    }
+
+    const order = await Order.findById(id);
+
+    if (!order) {
+        throw new ApiError(404, "Order not found");
+    }
+
+    if (order.status === "completed") {
+        throw new ApiError(400, "Completed orders cannot be canceled");
+    }
+
+    const orderItems = await Order_item.find({ order_id: order._id }).populate('product_id');
+
+    for (const item of orderItems) {
+        const product = item.product_id;
+        if (product) {
+            product.stock += item.quantity;
+            await product.save();
+        }
+    }
+
+    await Order_item.deleteMany({ order_id: order._id });
+
+    await Order.findByIdAndDelete(order._id);
+
+    res.status(200).json(
+        new ApiResponse(200, null, "Order and related items have been deleted successfully")
+    );
+});

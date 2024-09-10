@@ -2,7 +2,8 @@ import { Router } from "express";
 import {
     placeOrder,
     viewOrderHistory,
-    viewSingleOrder
+    viewSingleOrder,
+    cancelOrder
 } from "../controllers/order.controller.js"
 import { verifyJwt } from "../middlewares/auth.middleware.js"
 
@@ -13,7 +14,7 @@ router.use(verifyJwt);
 router.route('/').post(placeOrder);
 router.route('/').get(viewOrderHistory);
 router.route('/:id').get(viewSingleOrder);
-
+router.route('/:id').delete(cancelOrder);
 
 
 export default router;
