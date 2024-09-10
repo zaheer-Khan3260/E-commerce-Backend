@@ -12,6 +12,7 @@ router.use(verifyJwt);
 
 router.route('/').post(placeOrder);
 router.route('/').get(viewOrderHistory);
+router.route('/:id').get(viewSingleOrder);
 
 
 

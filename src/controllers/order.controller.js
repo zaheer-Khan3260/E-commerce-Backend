@@ -67,7 +67,7 @@ export const placeOrder = asyncHandler( async (req, res) => {
         const order = new Order({
             user_id,
             total_amount: totalAmount,
-            status: 'pending'
+            status: 'Pending'
         });
 
         await order.save({ session });
@@ -105,72 +105,54 @@ export const placeOrder = asyncHandler( async (req, res) => {
 
 export const viewOrderHistory = asyncHandler(async (req, res) => {
     const userId = req.user._id;
-    if(!userId) {
-        throw new ApiError(
-            401, 
-            "User not authenticated"
-        );
+    if (!userId) {
+        throw new ApiError(401, "User not authenticated");
     }
-    try {
-        const orders = await Order.find({
-             _id: userId 
-            }).sort({ createdAt: -1 })
 
-        if(!orders){
-            throw new ApiError(
-                404,
-                "No orders found for this user"
-            );
-        }
-
-        let orderHistory = [];
-
-        for(let order of orders){
-
-           const orderItems = await Order_item.findById(
-                {
-                order_id: order._id
-                }
-            ).populate('product_id')
-
-            if(!orderItems){
-                throw new ApiError(
-                    404,
-                    "No order items found for this order"
-                );
-            }
-
-         orderHistory.push(
-            {
-                order_id: order._id,
-                user_id: order.user_id,
-                total_amount: order.total_amount,
-                status: order.status,
-                order_items: orderItems.map(item => ({
-                    product_id: item.product_id._id,
-                    product_name: item.product_id.name,
-                    quantity: item.quantity,
-                    price: item.price
-                })),
-                createdAt: order.createdAt,
-                updatedAt: order.updatedAt
-            }
-         )};
-
-
-        res.status(200).json(
-            new ApiResponse(
-                200, 
-                orderHistory, 
-                "Order history retrieved successfully"
-            ));
-    } catch (error) {
-        throw new ApiError(
-            500,
-            error.message
-        )
-    }
+   try {
+     const orders = await Order.find({ user_id: userId }).sort({ createdAt: -1 });
+ 
+     if (orders.length === 0) {
+         throw new ApiError(404, "No orders found for this user");
+     }
+ 
+     let orderHistory = [];
+ 
+     for (let order of orders) {
+ 
+         const orderItems = await Order_item.find({ order_id: order._id }).populate('product_id');
+ 
+         if (orderItems.length === 0) {
+             throw new ApiError(404, "No order items found for this order");
+         }
+ 
+         orderHistory.push({
+             order_id: order._id,
+             user_id: order.user_id,
+             total_amount: order.total_amount,
+             status: order.status,
+             order_items: orderItems.map(item => ({
+                 product_id: item.product_id._id,
+                 product_name: item.product_id.name,
+                 quantity: item.quantity,
+                 price: item.price
+             })),
+             createdAt: order.createdAt,
+             updatedAt: order.updatedAt
+         });
+     }
+ 
+     res.status(200).json(
+         new ApiResponse(200, orderHistory, "Order history retrieved successfully")
+     );
+   } catch (error) {
+    throw new ApiError(
+        500,
+        error.message
+    )
+   }
 });
+
 
 export const viewSingleOrder = asyncHandler(async (req, res) => {
     const id = req.params.id;
@@ -183,14 +165,6 @@ export const viewSingleOrder = asyncHandler(async (req, res) => {
     }
 
     const order = await Order.findById(id)
-       .populate('user_id')
-       .populate({
-            path: 'order_items',
-            populate: {
-                path: 'product_id'
-            }
-        });
-
     if(!order){
         throw new ApiError(
             404,
